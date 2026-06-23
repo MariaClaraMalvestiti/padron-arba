@@ -1,0 +1,303 @@
+<mvc:View
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core"
+    controllerName="padron.arba.controller.Main"
+    displayBlock="true">
+
+    <Shell>
+        <App>
+            <pages>
+                <Page showNavButton="false">
+                    <customHeader>
+                        <Bar>
+                            <contentMiddle>
+                                <Title text="Carga de Padrón ARBA" level="H2" titleStyle="H2"/>
+                            </contentMiddle>
+                        </Bar>
+                    </customHeader>
+
+                    <subHeader>
+                        <Bar>
+                            <contentLeft>
+                                <Text text="Organismo: ARBA — Provincia de Buenos Aires" class="sapUiSmallMarginBegin"/>
+                            </contentLeft>
+                            <contentRight>
+                                <Text text="{resultados>/ultimaCarga}" class="sapUiSmallMarginEnd"/>
+                            </contentRight>
+                        </Bar>
+                    </subHeader>
+
+                    <content>
+                        <VBox class="sapUiMediumMargin">
+
+                            <!-- Panel de carga -->
+                            <Panel headerText="Seleccionar Padrón" class="sapUiSmallMarginBottom">
+                                <content>
+                                    <VBox class="sapUiSmallMargin">
+                                        <Label text="Archivo TXT del padrón ARBA (formato: PadronRGSPerMMAAAA.TXT)" class="sapUiSmallMarginBottom"/>
+                                        <HBox alignItems="Center" class="sapUiSmallMarginBottom">
+                                            <Button
+                                                text="Seleccionar archivo TXT"
+                                                icon="sap-icon://upload"
+                                                press="onSeleccionarArchivo"
+                                                class="sapUiSmallMarginEnd"/>
+                                            <ObjectStatus
+                                                id="nombreArchivo"
+                                                text="Ningún archivo seleccionado"
+                                                state="None"
+                                                icon="sap-icon://document"/>
+                                        </HBox>
+                                        <HBox>
+                                            <Button
+                                                text="Procesar Padrón"
+                                                type="Emphasized"
+                                                icon="sap-icon://process"
+                                                press="onProcesarBackend"
+                                                enabled="{resultados>/archivoSeleccionado}"
+                                                class="sapUiSmallMarginEnd"/>
+                                            <Button
+                                                text="Aplicar cambios"
+                                                type="Accept"
+                                                icon="sap-icon://upload-to-cloud"
+                                                press="onAplicarS4"
+                                                enabled="{resultados>/puedeAplicarCambios}"
+                                                class="sapUiSmallMarginEnd"/>
+                                            <Button
+                                                text="Cargas anteriores"
+                                                icon="sap-icon://history"
+                                                press="onToggleHistorial"
+                                                class="sapUiSmallMarginEnd"/>
+                                            <Button
+                                                text="Limpiar"
+                                                icon="sap-icon://clear-all"
+                                                press="onLimpiar"
+                                                visible="{resultados>/procesado}"/>
+                                        </HBox>
+                                    </VBox>
+                                </content>
+                            </Panel>
+
+                            <Panel
+                                headerText="Cargas anteriores"
+                                visible="{resultados>/showJobsHistory}"
+                                class="sapUiSmallMarginBottom">
+                                <content>
+                                    <List
+                                        items="{resultados>/jobs}"
+                                        noDataText="No hay cargas anteriores para mostrar.">
+                                        <StandardListItem
+                                            title="{resultados>titulo}"
+                                            description="{resultados>descripcion}"
+                                            info="{resultados>info}"
+                                            type="Active"
+                                            press="onSeleccionarJob"/>
+                                    </List>
+                                </content>
+                            </Panel>
+
+                            <!-- Indicador de carga -->
+                            <VBox visible="{resultados>/procesando}" alignItems="Center" class="sapUiLargeMargin">
+                                <BusyIndicator size="2rem"/>
+                                <Text text="Procesando padrón..." class="sapUiSmallMarginTop"/>
+                            </VBox>
+
+                            <!-- Panel de resumen -->
+                            <Panel
+                                headerText="Resumen del procesamiento"
+                                visible="{resultados>/procesado}"
+                                class="sapUiSmallMarginBottom">
+                                <content>
+                                    <HBox class="sapUiSmallMargin" justifyContent="SpaceBetween" wrap="Wrap">
+                                        <GenericTile
+                                            header="Total registros"
+                                            subheader="en el padrón"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <Text
+                                                            text="{resultados>/totalRegistros}"
+                                                            class="sapUiTinyMarginTop totalNumber"/>
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
+                                        <GenericTile
+                                            header="Actualizados"
+                                            subheader="condition records"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            truncateValueTo="8"
+                                                            value="{resultados>/actualizados}"
+                                                            icon="sap-icon://synchronize"
+                                                            valueColor="Good"/>
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
+                                        <GenericTile
+                                            header="Creados"
+                                            subheader="condition records"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            truncateValueTo="8"
+                                                            value="{resultados>/creados}"
+                                                            icon="sap-icon://add-document"
+                                                            valueColor="Good"/>
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
+                                        <GenericTile
+                                            header="Encontrados"
+                                            subheader="clientes en S/4"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            truncateValueTo="8"
+                                                            value="{resultados>/sinCambios}"
+                                                            icon="sap-icon://accept"
+                                                            valueColor="Neutral"/>
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
+                                        <GenericTile
+                                            header="Bajas"
+                                            subheader="contribuyentes inactivos"
+                                            class="sapUiSmallMarginEnd sapUiSmallMarginBottom">
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            truncateValueTo="8"
+                                                            value="{resultados>/bajas}"
+                                                            icon="sap-icon://decline"
+                                                            valueColor="Critical"/>
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
+                                        <GenericTile
+                                            header="No encontrados"
+                                            subheader="no son clientes"
+                                            class="sapUiSmallMarginBottom">
+                                            <tileContent>
+                                                <TileContent>
+                                                    <content>
+                                                        <NumericContent
+                                                            truncateValueTo="8"
+                                                            value="{resultados>/noEncontrados}"
+                                                            icon="sap-icon://warning"
+                                                            valueColor="Critical"/>
+                                                    </content>
+                                                </TileContent>
+                                            </tileContent>
+                                        </GenericTile>
+                                    </HBox>
+                                </content>
+                            </Panel>
+
+                            <!-- Log funcional -->
+                            <Panel
+                                headerText="Estado de la carga"
+                                visible="{resultados>/procesado}"
+                                class="sapUiSmallMarginBottom">
+                                <content>
+                                    <List items="{resultados>/messages}" noDataText="Sin mensajes.">
+                                        <CustomListItem>
+                                            <MessageStrip
+                                                text="{resultados>text}"
+                                                type="{resultados>type}"
+                                                showIcon="true"
+                                                class="sapUiTinyMargin"/>
+                                        </CustomListItem>
+                                    </List>
+                                    <Button
+                                        text="{= ${resultados>/showTechnicalDetail} ? 'Ocultar detalle tecnico' : 'Mostrar detalle tecnico' }"
+                                        icon="sap-icon://technical-object"
+                                        press="onToggleDetalleTecnico"
+                                        class="sapUiSmallMarginTop"/>
+                                </content>
+                            </Panel>
+
+                            <!-- Tabla de resultados -->
+                            <Table
+                                visible="{= ${resultados>/procesado} &amp;&amp; ${resultados>/showTechnicalDetail} }"
+                                items="{resultados>/registros}"
+                                growing="true"
+                                growingThreshold="20"
+                                alternateRowColors="true">
+                                <headerToolbar>
+                                    <Toolbar>
+                                        <Title text="Detalle de procesamiento"/>
+                                        <ToolbarSpacer/>
+                                        <SearchField
+                                            width="250px"
+                                            placeholder="Buscar por CUIT o cliente..."
+                                            liveChange="onBuscar"/>
+                                    </Toolbar>
+                                </headerToolbar>
+                                <columns>
+                                    <Column><Text text="CUIT"/></Column>
+                                    <Column><Text text="Cliente"/></Column>
+                                    <Column hAlign="End"><Text text="Alícuota"/></Column>
+                                    <Column><Text text="Fecha Desde"/></Column>
+                                    <Column><Text text="Fecha Hasta"/></Column>
+                                    <Column hAlign="Center"><Text text="Alta/Baja"/></Column>
+                                    <Column hAlign="Center"><Text text="Cambio Alíc."/></Column>
+                                    <Column hAlign="Center"><Text text="Estado"/></Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem>
+                                        <cells>
+                                            <Text text="{resultados>cuit}"/>
+                                            <Text text="{resultados>nombre}"/>
+                                            <ObjectNumber
+                                                number="{resultados>alicuota}"
+                                                unit="%"
+                                                state="{resultados>estadoColor}"/>
+                                            <Text text="{resultados>fechaDesde}"/>
+                                            <Text text="{resultados>fechaHasta}"/>
+                                            <ObjectStatus
+                                                text="{resultados>altaBaja}"
+                                                state="{= ${resultados>altaBaja} === 'S' ? 'Success' : 'Error'}"/>
+                                            <ObjectStatus
+                                                text="{resultados>cambioAlicuota}"
+                                                state="{= ${resultados>cambioAlicuota} === 'S' ? 'Warning' : 'None'}"/>
+                                            <ObjectStatus
+                                                text="{resultados>estado}"
+                                                state="{resultados>estadoColor}"
+                                                icon="{resultados>estadoIcono}"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+
+                        </VBox>
+                    </content>
+
+                    <footer>
+                        <Bar>
+                            <contentLeft>
+                                <Text text="Seidor Argentina — Padrón ARBA" class="sapUiSmallMarginBegin"/>
+                            </contentLeft>
+                        </Bar>
+                    </footer>
+
+                </Page>
+            </pages>
+        </App>
+    </Shell>
+
+</mvc:View>

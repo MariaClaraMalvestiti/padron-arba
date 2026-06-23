@@ -1,0 +1,23 @@
+[
+   {
+    "customerId": "100001",
+    "conditionType": "ZAR1",
+    "alicuota": 3,
+    "fechaDesde": "01042026",
+    "fechaHasta": "30042026"
+  },
+  {
+    "customerId": "100003",
+    "conditionType": "ZAR1",
+    "alicuota": 3,
+    "fechaDesde": "01042026",
+    "fechaHasta": "30042026"
+  },
+  {
+    "customerId": "100005",
+    "conditionType": "ZAR1",
+    "alicuota": 4,
+    "fechaDesde": "01042026",
+    "fechaHasta": "30042026"
+  }
+]

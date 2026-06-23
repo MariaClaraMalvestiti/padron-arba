@@ -1,0 +1,5 @@
+data/
+*.zip
+default-env.json
+destination-key.json
+node_modules/.cache/

@@ -1,0 +1,12 @@
+---
+applications:
+- name: padron-arba-api
+  memory: 512MB
+  disk_quota: 1GB
+  buildpacks:
+    - nodejs_buildpack
+  path: .
+  command: node padron-arba-backend/server.js
+  services:
+    - padrones-tax-upload-postgres
+    - padron-arba-destination

@@ -1,0 +1,26 @@
+{
+  "name": "padron-arba",
+  "version": "1.0.0",
+  "description": "Carga de Padrón ARBA - Simulación",
+  "scripts": {
+    "start": "ui5 serve"
+  },
+  "devDependencies": {
+    "@sap/cds": "^9.9.1",
+    "@sap/cds-dk": "^9.9.2",
+    "@ui5/cli": "^3.0.0",
+    "sqlite3": "^6.0.1",
+    "ui5-middleware-simpleproxy": "^3.8.0"
+  },
+  "dependencies": {
+    "@sap-cloud-sdk/connectivity": "^4.7.0",
+    "@sap-cloud-sdk/http-client": "^4.7.0",
+    "@sap/xsenv": "^6.2.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "pg": "^8.21.0",
+    "uuid": "^14.0.0",
+    "yeoman-generator": "^8.2.2"
+  }
+}

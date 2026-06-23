@@ -1,0 +1,31 @@
+---
+applications:
+- name: padron-arba-api
+  memory: 512MB
+  disk_quota: 1GB
+  buildpacks:
+    - nodejs_buildpack
+  path: padron-arba-backend
+  command: node server.js
+  services:
+    - padrones-tax-upload-postgres
+    - padron-arba-destination
+
+- name: padron-arba-approuter
+  memory: 256MB
+  disk_quota: 512MB
+  buildpacks:
+    - nodejs_buildpack
+  path: approuter
+  env:
+    destinations: '[{"name":"padron-arba-api","url":"https://padron-arba-api.cfapps.us10-001.hana.ondemand.com","forwardAuthToken":false},{"name":"padron-arba-ui","url":"https://padron-arba-reflective-capybara-bs.cfapps.us10-001.hana.ondemand.com","forwardAuthToken":false}]'
+  services:
+    - padron-arba-xsuaa
+
+- name: padron-arba
+  memory: 256MB
+  disk_quota: 512MB
+  buildpacks:
+    - staticfile_buildpack
+  path: webapp
+  random-route: true

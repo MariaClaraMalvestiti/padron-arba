@@ -1,0 +1,42 @@
+[
+  {
+    "cuit": "20000282465",
+    "customerId": "100001",
+    "nombre": "Cliente A SA"
+  },
+  {
+    "cuit": "20002362075",
+    "customerId": "100002",
+    "nombre": "Cliente B SRL"
+  },
+  {
+    "cuit": "20002592720",
+    "customerId": "100003",
+    "nombre": "Cliente C SA"
+  },
+  {
+    "cuit": "20004105886",
+    "customerId": "100004",
+    "nombre": "Cliente D SRL"
+  },
+  {
+    "cuit": "20004226918",
+    "customerId": "100005",
+    "nombre": "Cliente E SA"
+  },
+  {
+    "cuit": "20006472061",
+    "customerId": "100006",
+    "nombre": "Cliente F SRL"
+  },
+  {
+    "cuit": "20004240732",
+    "customerId": "100007",
+    "nombre": "Cliente G SA"
+  },
+  {
+    "cuit": "20002834627",
+    "customerId": "100008",
+    "nombre": "Cliente H SRL"
+  }
+]
