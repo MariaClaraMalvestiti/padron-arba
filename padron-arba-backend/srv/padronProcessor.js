@@ -209,8 +209,10 @@ async function findCustomerTaxGroupingIB2(customerId) {
 
 async function createCustomerTaxGroupingIB2(customerId, registro, csrfToken) {
     const payload = {
-        CustomerTaxGroupingCode: CUSTOMER_TAX_GROUPING_CONFIG.code
-    };
+    CustomerTaxGroupingCode: CUSTOMER_TAX_GROUPING_CONFIG.code,
+    CustTaxGroupSubjectedStartDate: formatDateForS4(registro.fechaDesde),
+    CustTaxGroupSubjectedEndDate: CUSTOMER_TAX_GROUPING_CONFIG.endDate
+};
 
     const response = await requestRaw(PRICING_CONFIG.businessPartnerDestinationName, {
         method: "POST",
@@ -235,8 +237,8 @@ async function createCustomerTaxGroupingIB2(customerId, registro, csrfToken) {
 
 async function updateCustomerTaxGroupingIB2(customerId, registro, csrfToken) {
     const payload = {
-        FiscalSubjectedStartDate: formatDateForS4(registro.fechaDesde),
-        FiscalSubjectedEndDate: CUSTOMER_TAX_GROUPING_CONFIG.endDate
+        CustTaxGroupSubjectedStartDate: formatDateForS4(registro.fechaDesde),
+        CustTaxGroupSubjectedEndDate: CUSTOMER_TAX_GROUPING_CONFIG.endDate
     };
 
     const response = await requestRaw(PRICING_CONFIG.businessPartnerDestinationName, {

@@ -224,9 +224,13 @@ app.post("/api/business-partners/cache/refresh", async (req, res, next) => {
     }
 });
 
-app.post("/api/business-partners/resolve-cached", async (req, res) => {
-    const cuits = req.body && Array.isArray(req.body.cuits) ? req.body.cuits : [];
-    res.json(bpCache.resolve(cuits));
+app.post("/api/business-partners/resolve-cached", async (req, res, next) => {
+   try {
+        const cuits = req.body && Array.isArray(req.body.cuits) ? req.body.cuits : [];
+        res.json(await bpCache.resolve(cuits));
+    } catch (error) {
+        next(error);
+    }
 });
 
 app.get("/health", (_req, res) => {
@@ -263,42 +267,95 @@ app.post("/api/padron/apply-job", async (req, res, next) => {
         }));
 
         setTimeout(async function () {
+            const result = {
+                totalRegistros: rows.length,
+                encontrados: 0,
+                noEncontrados: 0,
+                crear: 0,
+                modificar: 0,
+                errores: 0,
+                registros: [],
+                aplicados: 0
+            };
+
+            function buildPadronLine(row) {
+                return [
+                    "P",
+                    row.publicationDate || "",
+                    row.fechaDesde,
+                    row.fechaHasta,
+                    row.cuit,
+                    row.tipoContribuyente || "",
+                    row.altaBaja || "N",
+                    row.cambioAlicuota || "S",
+                    String(row.alicuota || 0).replace(".", ","),
+                    row.grupo || ""
+                ].join(";") + "\n";
+            }
+
+            function addPartial(partial) {
+                result.encontrados += partial.encontrados || 0;
+                result.noEncontrados += partial.noEncontrados || 0;
+                result.crear += partial.crear || 0;
+                result.modificar += partial.modificar || 0;
+                result.errores += partial.errores || 0;
+                result.aplicados += partial.aplicados || 0;
+
+                if (Array.isArray(partial.registros)) {
+                    result.registros = result.registros.concat(partial.registros);
+                }
+            }
+
             try {
                 await Promise.resolve(jobStore.updateJob(job.id, {
                     status: "RUNNING",
                     startedAt: new Date().toISOString(),
-                    message: "Aplicando registros en S/4: 0/" + rows.length
+                    result: result,
+                    message: "Aplicando cambios: 0/" + rows.length
                 }));
 
-                const lines = rows.map(function (row) {
-                    return [
-                        "P",
-                        "",
-                        row.fechaDesde,
-                        row.fechaHasta,
-                        row.cuit,
-                        "",
-                        row.altaBaja || "N",
-                        row.cambioAlicuota || "S",
-                        String(row.alicuota || 0).replace(".", ","),
-                        ""
-                    ].join(";");
-                }).join("\n") + "\n";
+                for (let index = 0; index < rows.length; index += 1) {
+                    const row = rows[index];
 
-                const result = await processor.applyPadron(lines, {
-                    maxRecords: rows.length
-                });
+                    try {
+                        const partial = await processor.applyPadron(buildPadronLine(row), {
+                            maxRecords: 1
+                        });
+
+                        addPartial(partial);
+                    } catch (rowError) {
+                        result.errores += 1;
+                        result.registros.push(Object.assign({}, row, {
+                            estado: "Error aplicacion",
+                            estadoColor: "Error",
+                            estadoIcono: "sap-icon://error",
+                            accion: "No se pudo aplicar el cambio en S/4",
+                            detalle: rowError.message
+                        }));
+                    }
+
+                    if ((index + 1) % 5 === 0 || index + 1 === rows.length) {
+                        await Promise.resolve(jobStore.updateJob(job.id, {
+                            status: "RUNNING",
+                            result: result,
+                            message: "Aplicando cambios: " + (index + 1) + "/" + rows.length +
+                                ". Aplicados: " + (result.aplicados || 0) +
+                                ". Errores: " + (result.errores || 0) + "."
+                        }));
+                    }
+                }
 
                 await Promise.resolve(jobStore.updateJob(job.id, {
                     status: "DONE",
                     finishedAt: new Date().toISOString(),
                     result: result,
-                    message: "Aplicación finalizada. Aplicados en S/4: " + (result.aplicados || 0) + ". Errores: " + (result.errores || 0) + "."
+                    message: "Aplicacion finalizada. Aplicados en S/4: " + (result.aplicados || 0) + ". Errores: " + (result.errores || 0) + "."
                 }));
             } catch (error) {
                 await Promise.resolve(jobStore.updateJob(job.id, {
                     status: "ERROR",
                     finishedAt: new Date().toISOString(),
+                    result: result,
                     error: error.message
                 }));
             }
@@ -422,7 +479,6 @@ function getChunkUploadPath(uploadId) {
 async function filterUploadedPadronStreaming(filePath, jobId) {
     const foundRows = [];
     const batchSize = 5000;
-    const bpCsrfToken = await processor.fetchBusinessPartnerCsrfToken();
     let totalRegistros = 0;
     let batchRows = [];
 
@@ -435,12 +491,13 @@ async function filterUploadedPadronStreaming(filePath, jobId) {
             return row.cuit;
         })));
 
-        const resolved = await bpCache.resolve(cuits);
+     const resolved = await bpCache.resolve(cuits);
         const bpByCuit = new Map();
 
         (resolved.businessPartners || []).forEach(function (bp) {
             bpByCuit.set(String(bp.cuit), bp);
         });
+
 
         for (const row of batchRows) {
             const bp = bpByCuit.get(row.cuit);
@@ -449,33 +506,16 @@ async function filterUploadedPadronStreaming(filePath, jobId) {
                 continue;
             }
 
-            try {
-                const ib2Status = await processor.ensureCustomerTaxGroupingIB2(bp.customerId, row, bpCsrfToken);
-
-                foundRows.push(Object.assign({}, row, {
-                    businessPartner: bp.businessPartner,
-                    customerId: bp.customerId,
-                    nombre: bp.nombre,
-                    categoriaFiscal: "IB2",
-                    categoriaFiscalEstado: ib2Status,
-                    estado: "Crear",
-                    estadoColor: "Information",
-                    estadoIcono: "sap-icon://add-document",
-                    accion: "Listo para aplicar en S/4"
-                }));
-            } catch (error) {
-                foundRows.push(Object.assign({}, row, {
-                    businessPartner: bp.businessPartner,
-                    customerId: bp.customerId,
-                    nombre: bp.nombre,
-                    categoriaFiscal: "IB2",
-                    estado: "Error categoria fiscal",
-                    estadoColor: "Error",
-                    estadoIcono: "sap-icon://error",
-                    accion: "No se pudo actualizar categoria fiscal IB2",
-                    detalle: error.message
-                }));
-            }
+            foundRows.push(Object.assign({}, row, {
+                businessPartner: bp.businessPartner,
+                customerId: bp.customerId,
+                nombre: bp.nombre,
+                categoriaFiscal: "IB2",
+                estado: "Crear",
+                estadoColor: "Information",
+                estadoIcono: "sap-icon://add-document",
+                accion: "Listo para aplicar en S/4"
+            }));
         }
 
         await Promise.resolve(jobStore.updateJob(jobId, {
@@ -498,6 +538,21 @@ async function filterUploadedPadronStreaming(filePath, jobId) {
         }
 
         totalRegistros += 1;
+
+        if (totalRegistros % 100000 === 0) {
+            await Promise.resolve(jobStore.updateJob(jobId, {
+                message: "Leyendo padrón por stream. Registros leídos: " + totalRegistros + ". Encontrados: " + foundRows.length,
+                summary: {
+                    totalRegistros: totalRegistros,
+                    encontrados: foundRows.length,
+                    noEncontrados: Math.max(totalRegistros - foundRows.length, 0),
+                    crear: foundRows.length,
+                    modificar: 0,
+                    errores: 0
+                }
+            }));
+        }
+
         batchRows.push(row);
 
         if (batchRows.length >= batchSize) {
@@ -758,7 +813,6 @@ app.post("/api/padron/jobs-upload", upload.single("file"), async (req, res, next
             return;
         }
 
-        const maxRecords = req.query && req.query.maxRecords ? Number(req.query.maxRecords) : 250;
         const filePath = req.file.path;
         const originalName = req.file.originalname;
 
@@ -772,15 +826,7 @@ app.post("/api/padron/jobs-upload", upload.single("file"), async (req, res, next
             });
 
             try {
-                const content = await readFirstLines(filePath, maxRecords);
-                const result = await processor.previewPadron(content, {
-                    cuits: [],
-                    maxRecords
-                });
-
-                if (result && Array.isArray(result.registros)) {
-                    result.registros = [];
-                }
+                const result = await filterUploadedPadronStreaming(filePath, job.id);
 
                 await jobStore.updateJob(job.id, {
                     status: "DONE",
